@@ -1,0 +1,7 @@
+config.json
+.env
+settings.ini
+*.log
+__pycache__/
+node_modules/
+.void/
