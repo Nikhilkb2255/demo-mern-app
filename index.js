@@ -1,7 +1,15 @@
+// Initialize OpenTelemetry FIRST before any other imports
+const { initOpenTelemetry } = require('observability-package');
+initOpenTelemetry();
+
 const express = require('express');
 const cors = require('cors');
 
 const app = express();
+// Setup observability - adds metrics, logging, tracing
+const { setupObservability } = require('observability-package');
+const observability = setupObservability(app);
+
 const PORT = process.env.PORT || 3000;
 
 // Middleware
