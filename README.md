@@ -1,6 +1,6 @@
 # Example Node.js App
 
-This is a simple Node.js Express application that demonstrates how to integrate observability features using our automatic integration script.
+This is a simple Node.js Express application.
 
 ## Features
 
@@ -19,20 +19,6 @@ This is a simple Node.js Express application that demonstrates how to integrate 
 | GET | `/api/health` | Health check with system info |
 | GET | `/api/slow` | Simulate slow operation (2s delay) |
 | GET | `/api/error` | Simulate error (500 status) |
-
-## Before Integration
-
-This app has no observability features - no metrics, logging, or tracing.
-
-## After Integration
-
-After running the integration script, this app will have:
-
-- ✅ **Metrics** collection (Prometheus)
-- ✅ **Structured logging** (Winston)
-- ✅ **Distributed tracing** (Jaeger)
-- ✅ **Health monitoring** endpoint
-- ✅ **Request tracking** middleware
 
 ## How to Use
 
