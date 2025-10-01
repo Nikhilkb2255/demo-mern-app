@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # Your Node.js Application with Winston + OTLP logging
+  app:
+    build: .
+    container_name: my-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - SERVICE_NAME=demo-mern-app
+      - SERVICE_VERSION=1.0.0
+      - LOG_DIR=/var/log/app
+      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
+      - OTLP_API_KEY=${OTLP_API_KEY}
+    volumes:
+      - app-logs:/var/log/app
+    restart: unless-stopped
+    depends_on:
+      - otel-collector
+    networks:
+      - observability-network
+
+  # OpenSearch for log storage
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: my-app-opensearch
+    environment:
+      - cluster.name=my-app-cluster
+      - node.name=my-app-node
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    networks:
+      - observability-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # OpenSearch Dashboards for log visualization
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.11.0
+    container_name: my-app-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - observability-network
+
+  # OTLP Collector with MongoDB API key validation
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: my-app-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+volumes:
+      - ./monitoring/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "13133:13133" # Health check
+      - "1777:1777"   # pprof
+      - "55679:55679" # zpages
+    environment:
+      - MONGODB_URI=mongodb://devopsark-dev:sdafbsdoufbnojandojsn@mongo-node-one.devopsark.cloud:37123/?authSource=devopsark-dev
+      - MONGODB_DATABASE=devopsark-dev
+      - OPENSEARCH_ENDPOINT=http://opensearch:9200
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - observability-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  app-logs:
+  opensearch-data:
+
+networks:
+  observability-network:
+    driver: bridge

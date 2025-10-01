@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # OpenSearch for log storage
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: devopsark-opensearch
+          environment:
+      - cluster.name=devopsark-cluster
+      - node.name=devopsark-node
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    networks:
+      - observability-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # OpenSearch Dashboards for log visualization
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.11.0
+    container_name: devopsark-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - observability-network
+
+  # OTLP Collector with MongoDB API key validation
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: devopsark-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "13133:13133" # Health check
+      - "1777:1777"   # pprof
+      - "55679:55679" # zpages
+    environment:
+      - MONGODB_URI=mongodb://devopsark-dev:sdafbsdoufbnojandojsn@mongo-node-one.devopsark.cloud:37123/?authSource=devopsark-dev
+      - MONGODB_DATABASE=devopsark-dev
+      - OPENSEARCH_ENDPOINT=http://opensearch:9200
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - observability-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  opensearch-data:
+    driver: local
+
+networks:
+  observability-network:
+    driver: bridge
