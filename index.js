@@ -73,5 +73,4 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Example app running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`👥 Users API: http://localhost:${PORT}/api/users`);
 });
