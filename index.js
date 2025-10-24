@@ -18,6 +18,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   logger.info('Route accessed', { path: '/', method: 'GET' });
   logger.info('Route accessed', { path: '/', method: 'GET' });
+  logger.info('Route accessed', { path: '/', method: 'GET' });
   res.json({ 
     message: 'Hello from Example Node.js App!',
     timestamp: new Date().toISOString(),
@@ -26,6 +27,19 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
+  // Create child span for database operation
+  const dbSpan = createChildSpan(req, 'database.query', {
+    'db.operation': 'SELECT',
+    'db.table': 'users',
+    'db.system': 'postgresql'
+  });
+  
+  // Create child span for data processing
+  const processSpan = createChildSpan(req, 'data.processing', {
+    'operation': 'transform_data',
+    'route': '/api/users'
+  });
+  logger.info('Route accessed', { path: '/api/users', method: 'GET' });
   // Create child span for database operation
   const dbSpan = createChildSpan(req, 'database.query', {
     'db.operation': 'SELECT',
@@ -79,10 +93,26 @@ app.get('/api/users', (req, res) => {
 
 
   
+  // Finish child spans
+
+
+
+  
+  finishChildSpan(processSpan, { 'output.records': 1 });
+
+
+
+  
+  finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
+
+
+
+  
   res.json({ users });
 });
 
 app.get('/api/health', (req, res) => {
+  logger.info('Route accessed', { path: '/api/health', method: 'GET' });
   logger.info('Route accessed', { path: '/api/health', method: 'GET' });
   logger.info('Route accessed', { path: '/api/health', method: 'GET' });
   res.json({ 
@@ -94,6 +124,19 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/slow', (req, res) => {
+  // Create child span for database operation
+  const dbSpan = createChildSpan(req, 'database.query', {
+    'db.operation': 'SELECT',
+    'db.table': 'slow',
+    'db.system': 'postgresql'
+  });
+  
+  // Create child span for data processing
+  const processSpan = createChildSpan(req, 'data.processing', {
+    'operation': 'transform_data',
+    'route': '/api/slow'
+  });
+  logger.info('Route accessed', { path: '/api/slow', method: 'GET' });
   // Create child span for database operation
   const dbSpan = createChildSpan(req, 'database.query', {
     'db.operation': 'SELECT',
@@ -137,6 +180,18 @@ app.get('/api/slow', (req, res) => {
     finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
 
 
+    // Finish child spans
+
+
+
+    finishChildSpan(processSpan, { 'output.records': 1 });
+
+
+
+    finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
+
+
+
     res.json({ 
       message: 'This was a slow operation',
       duration: '2 seconds'
@@ -171,6 +226,19 @@ app.get('/api/error', (req, res) => {
     'route': '/api/error'
   });
   logger.info('Route accessed', { path: '/api/error', method: 'GET' });
+  // Create child span for database operation
+  const dbSpan = createChildSpan(req, 'database.query', {
+    'db.operation': 'SELECT',
+    'db.table': 'error',
+    'db.system': 'postgresql'
+  });
+  
+  // Create child span for data processing
+  const processSpan = createChildSpan(req, 'data.processing', {
+    'operation': 'transform_data',
+    'route': '/api/error'
+  });
+  logger.info('Route accessed', { path: '/api/error', method: 'GET' });
   // Finish child spans
 
   finishChildSpan(processSpan, { 'output.records': 1 });
@@ -184,6 +252,18 @@ app.get('/api/error', (req, res) => {
 
 
   finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
+
+
+  // Finish child spans
+
+
+
+  finishChildSpan(processSpan, { 'output.records': 1 });
+
+
+
+  finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
+
 
 
   res.status(500).json({ 
@@ -210,6 +290,18 @@ app.use((err, req, res, next) => {
   finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
 
 
+  // Finish child spans
+
+
+
+  finishChildSpan(processSpan, { 'output.records': 1 });
+
+
+
+  finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
+
+
+
   res.status(500).json({ 
     error: 'Internal Server Error',
     message: err.message 
@@ -231,6 +323,18 @@ app.use((req, res) => {
 
 
   finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
+
+
+  // Finish child spans
+
+
+
+  finishChildSpan(processSpan, { 'output.records': 1 });
+
+
+
+  finishChildSpan(dbSpan, { 'db.rows_returned': 1 });
+
 
 
   res.status(404).json({ 
