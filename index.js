@@ -1,7 +1,13 @@
+// Initialize HTTP Observability BEFORE any other imports
+const { setupObservability } = require('./monitoring/http-observability-setup');
+
 const express = require('express');
 const cors = require('cors');
 
 const app = express();
+// Setup HTTP Observability (Winston + Prometheus + Jaeger + HTTP Transmission)
+const { logger, tracer, httpClient, createChildSpan, finishChildSpan } = setupObservability(app);
+
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -10,6 +16,7 @@ app.use(express.json());
 
 // Routes
 app.get('/', (req, res) => {
+  logger.info('Route accessed', { path: '/', method: 'GET' });
   res.json({ 
     message: 'Hello from Example Node.js App!',
     timestamp: new Date().toISOString(),
@@ -18,6 +25,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
+  logger.info('Route accessed', { path: '/api/users', method: 'GET' });
   const users = [
     { id: 1, name: 'John Doe', email: 'john@example.com' },
     { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
@@ -28,6 +36,7 @@ app.get('/api/users', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
+  logger.info('Route accessed', { path: '/api/health', method: 'GET' });
   res.json({ 
     status: 'healthy',
     uptime: process.uptime(),
@@ -37,6 +46,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/slow', (req, res) => {
+  logger.info('Route accessed', { path: '/api/slow', method: 'GET' });
   // Simulate slow operation
   setTimeout(() => {
     res.json({ 
@@ -47,6 +57,7 @@ app.get('/api/slow', (req, res) => {
 });
 
 app.get('/api/error', (req, res) => {
+  logger.info('Route accessed', { path: '/api/error', method: 'GET' });
   res.status(500).json({ 
     error: 'This is a simulated error',
     code: 'SIMULATED_ERROR'
@@ -55,7 +66,7 @@ app.get('/api/error', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  logger.error('Error:', err);
   res.status(500).json({ 
     error: 'Internal Server Error',
     message: err.message 
@@ -71,6 +82,6 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Example app running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  logger.info(`🚀 Example app running on port ${PORT}`);
+  logger.info(`📊 Health check: http://localhost:${PORT}/api/health`);
 });
